@@ -1,5 +1,7 @@
 # Ukulele Chord Explorer
 
+[![Deploy to GitHub Pages](https://github.com/onur-gunes/Ukulele-Chord-Explorer/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/onur-gunes/Ukulele-Chord-Explorer/actions/workflows/deploy-pages.yml)
+
 ![Ukulele Chord Explorer screenshot](shots/desktop.png)
 
 Every way to play any chord, on every fret — in a single HTML file.
