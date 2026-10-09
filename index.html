@@ -107,6 +107,13 @@ main { display: grid; grid-template-columns: 400px 1fr; gap: 34px; align-items: 
 }
 .shapes-head h3 { font-size: 15.5px; font-weight: 600; }
 .shapes-head h3 .cn { color: var(--accent); }
+.shapes-head .hard-tag {
+  display: inline-block; vertical-align: 3px; margin-left: 8px;
+  font-size: 10px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--accent); border: 1px solid var(--accent); border-radius: 999px;
+  padding: 2px 8px; cursor: default;
+}
+.shapes-head .hard-tag[hidden] { display: none; }
 .shapes-head .cnt { font-size: 13px; color: var(--muted); white-space: nowrap; }
 .shapes {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(134px, 1fr)); gap: 14px;
@@ -118,6 +125,11 @@ main { display: grid; grid-template-columns: 400px 1fr; gap: 34px; align-items: 
   animation: rise .3s ease backwards;
 }
 .shape:hover { border-color: var(--border2); transform: translateY(-2px); }
+.shape.easy { border-color: var(--accent); outline: 1px dashed var(--accent); outline-offset: 2px; }
+.shape .easylabel {
+  font-size: 10px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--accent); line-height: 1;
+}
 .shape svg { width: 100%; max-width: 116px; height: auto; display: block; }
 .shape .fr {
   position: relative; display: block; width: 100%; max-width: 116px; height: 15px;
@@ -132,6 +144,7 @@ main { display: grid; grid-template-columns: 400px 1fr; gap: 34px; align-items: 
 .nut { stroke: #c9d2df; stroke-width: 4.5; stroke-linecap: round; }
 .dot, .bar { fill: var(--accent); }
 .oc { fill: none; stroke: #77829a; stroke-width: 1.7; }
+.mx { fill: #77829a; font-size: 11px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
 .pos {
   fill: #828d9e; font-size: 11px; font-weight: 700;
   text-anchor: middle; dominant-baseline: central;
@@ -197,7 +210,7 @@ main { display: grid; grid-template-columns: 400px 1fr; gap: 34px; align-items: 
         <div class="notes" id="notes"></div>
       </div>
       <div class="shapes-head">
-        <h3><span class="cn" id="shapeName">C</span></h3>
+        <h3><span class="cn" id="shapeName">C</span><span class="hard-tag" id="shapeHard" hidden>hard</span></h3>
         <div class="cnt" id="shapeCount"></div>
       </div>
       <div class="shapes" id="shapes"></div>
@@ -251,6 +264,15 @@ main { display: grid; grid-template-columns: 400px 1fr; gap: 34px; align-items: 
 
   var state = { rootPc: 0, rootName: 'C', quality: 'maj', spelling: 'sharp' };
 
+  // Barre-heavy chords: the plain major/minor triad on these roots needs a
+  // stretchy grip, so those get extra muted first-position alternatives.
+  var HARD_MAJOR = { 1: 1, 4: 1, 6: 1, 8: 1, 10: 1, 11: 1 };   // C#, E, F#, G#, Bb, B
+  var HARD_MINOR = { 1: 1, 8: 1, 10: 1, 11: 1 };               // C#m, G#m, A#m, Bm
+  function isHardChord(rootPc, quality) {
+    var m = quality === 'maj' ? HARD_MAJOR : (quality === 'm' ? HARD_MINOR : null);
+    return !!m && !!m[rootPc];
+  }
+
   function typeOf(id) {
     for (var i = 0; i < TYPES.length; i++) if (TYPES[i].id === id) return TYPES[i];
     return TYPES[0];
@@ -296,6 +318,41 @@ main { display: grid; grid-template-columns: 400px 1fr; gap: 34px; align-items: 
     if (!nz.length) return 0;
     return Math.max.apply(null, nz) - Math.min.apply(null, nz);
   }
+  function shapeRank(g) {
+    var nz = g.filter(function (v) { return v > 0; });
+    var uniq = uniqSorted(nz);
+    return {
+      sounding: g.filter(function (v) { return v >= 0; }).length,
+      maxF: nz.length ? Math.max.apply(null, nz) : 0,
+      fretted: nz.length,
+      span: uniq.length >= 2 ? uniq[uniq.length - 1] - uniq[0] : 0
+    };
+  }
+  // For hard chords, lift the best strictly-easier muted voicing into the
+  // second slot so it surfaces right after the standard shape.
+  function boostEasy(shapes, rootPc, quality) {
+    if (!isHardChord(rootPc, quality) || shapes.length < 2) return;
+    var std = shapes[0];
+    if (std.indexOf(-1) >= 0) return;
+    var sr = shapeRank(std);
+    var best = -1, bm = -1, bc = -1, bs = -1;
+    for (var i = 1; i < shapes.length; i++) {
+      var v = shapes[i];
+      if (v.indexOf(-1) < 0) continue;
+      var r = shapeRank(v);
+      if (r.maxF > sr.maxF) continue;
+      if (r.maxF === sr.maxF && r.fretted >= sr.fretted) continue;
+      if (best < 0 ||
+          r.maxF < bm ||
+          (r.maxF === bm && r.fretted < bc) ||
+          (r.maxF === bm && r.fretted === bc && r.sounding > bs)) {
+        best = i; bm = r.maxF; bc = r.fretted; bs = r.sounding;
+      }
+    }
+    if (best < 2) return;
+    var pick = shapes.splice(best, 1)[0];
+    shapes.splice(1, 0, pick);
+  }
   function findShapes(rootPc, quality, relaxed) {
     var t = typeOf(quality);
     var allowed = {};
@@ -304,32 +361,42 @@ main { display: grid; grid-template-columns: 400px 1fr; gap: 34px; align-items: 
       ? t.tones.filter(function (_, i) { return i !== 2; })
       : t.tones;
     var essential = essentialTones.map(function (tone) { return (rootPc + tone[0]) % 12; });
+    var muted = isHardChord(rootPc, quality);
+    var per = [null, null, null, null];
+    for (var s = 0; s < 4; s++) {
+      var list = muted ? [-1] : [];
+      for (var f = 0; f <= MAX_FRET; f++) if (allowed[(TUNING[s] + f) % 12]) list.push(f);
+      per[s] = list;
+    }
     var out = [];
-    for (var a = 0; a <= MAX_FRET; a++)
-    for (var b = 0; b <= MAX_FRET; b++)
-    for (var c = 0; c <= MAX_FRET; c++)
-    for (var d = 0; d <= MAX_FRET; d++) {
-      var f = [a, b, c, d];
-      var pcs = [(TUNING[0] + a) % 12, (TUNING[1] + b) % 12, (TUNING[2] + c) % 12, (TUNING[3] + d) % 12];
-      var ok = true;
-      for (var k = 0; k < 4; k++) if (!allowed[pcs[k]]) { ok = false; break; }
-      if (!ok) continue;
+    var f = [0, 0, 0, 0];
+    for (var a = 0; a < per[0].length; a++)
+    for (var b = 0; b < per[1].length; b++)
+    for (var c = 0; c < per[2].length; c++)
+    for (var d = 0; d < per[3].length; d++) {
+      f[0] = per[0][a]; f[1] = per[1][b]; f[2] = per[2][c]; f[3] = per[3][d];
+      var pcs = [];
+      for (var k = 0; k < 4; k++) if (f[k] >= 0) pcs.push((TUNING[k] + f[k]) % 12);
+      if (pcs.length < 3) continue;
       var cov = true;
       for (var e = 0; e < essential.length; e++) if (pcs.indexOf(essential[e]) < 0) { cov = false; break; }
       if (!cov) continue;
       if (!playable(f, relaxed)) continue;
-      out.push(f);
+      out.push([f[0], f[1], f[2], f[3]]);
     }
     out.sort(function (x, y) {
-      var mx = Math.max.apply(null, x) - Math.max.apply(null, y);
+      var rx = shapeRank(x), ry = shapeRank(y);
+      if (rx.sounding !== ry.sounding) return ry.sounding - rx.sounding;
+      var mx = rx.maxF - ry.maxF;
       if (mx) return mx;
-      var fx = x.filter(function (v) { return v > 0; }).length - y.filter(function (v) { return v > 0; }).length;
+      var fx = rx.fretted - ry.fretted;
       if (fx) return fx;
-      var sx = spanOf(x) - spanOf(y);
+      var sx = rx.span - ry.span;
       if (sx) return sx;
       for (var i = 0; i < 4; i++) if (x[i] !== y[i]) return x[i] - y[i];
       return 0;
     });
+    boostEasy(out, rootPc, quality);
     return out;
   }
 
@@ -368,7 +435,7 @@ main { display: grid; grid-template-columns: 400px 1fr; gap: 34px; align-items: 
     }
     var groups = {};
     frets.forEach(function (v, idx) {
-      if (v === 0) return;
+      if (v <= 0) return;
       (groups[v] = groups[v] || []).push(idx);
     });
     var covered = {};
@@ -390,6 +457,7 @@ main { display: grid; grid-template-columns: 400px 1fr; gap: 34px; align-items: 
     frets.forEach(function (fr, idx) {
       if (covered[idx]) return;
       if (fr === 0) s += '<circle class="oc" cx="' + xStr(idx) + '" cy="' + (top - 9) + '" r="4.5"/>';
+      else if (fr < 0) s += '<text class="mx" x="' + xStr(idx) + '" y="' + (top - 9) + '">\u00d7</text>';
       else s += '<circle class="dot" cx="' + xStr(idx) + '" cy="' + yDot(fr) + '" r="7"/>';
     });
     return s + '</svg>';
@@ -638,6 +706,7 @@ main { display: grid; grid-template-columns: 400px 1fr; gap: 34px; align-items: 
   function renderShapes() {
     var t = typeOf(state.quality);
     var name = state.rootName + t.suffix;
+    var hard = isHardChord(state.rootPc, state.quality);
     var shapes = findShapes(state.rootPc, state.quality, false);
     var stretch = false;
     if (!shapes.length) {
@@ -645,16 +714,24 @@ main { display: grid; grid-template-columns: 400px 1fr; gap: 34px; align-items: 
       stretch = shapes.length > 0;
     }
     document.getElementById('shapeName').textContent = name;
+    var hTag = document.getElementById('shapeHard');
+    hTag.hidden = !hard;
+    if (hard) hTag.title = 'Barre-heavy chord \u2014 the second shape is an easier muted voicing';
     document.getElementById('shapeCount').textContent =
       shapes.length + ' ' + (shapes.length === 1 ? 'way' : 'ways') + ' to play' +
       (stretch ? ' \u00b7 stretch voicings' : '');
     document.getElementById('shapes').innerHTML = shapes.length
       ? shapes.map(function (f, i) {
-          return '<div class="shape" style="animation-delay:' + Math.min(i * 25, 350) + 'ms">' +
+          var easy = hard && i === 1 && f.indexOf(-1) >= 0;
+          return '<div class="shape' + (easy ? ' easy' : '') + '"' +
+            (easy ? ' title="Easy alternative \u2014 a muted first-position voicing"' : '') +
+            ' style="animation-delay:' + Math.min(i * 25, 350) + 'ms">' +
             diagramSVG(f) +
             '<div class="fr">' + f.map(function (v, j) {
-              return '<span style="left:' + (strX(j) / DIAG_W * 100).toFixed(4) + '%">' + v + '</span>';
-            }).join('') + '</div></div>';
+              return '<span style="left:' + (strX(j) / DIAG_W * 100).toFixed(4) + '%">' + (v < 0 ? '\u00d7' : v) + '</span>';
+            }).join('') + '</div>' +
+            (easy ? '<div class="easylabel">easy</div>' : '') +
+            '</div>';
         }).join('')
       : '<div class="empty">No four-string voicing found below the 12th fret.</div>';
   }

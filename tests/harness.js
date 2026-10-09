@@ -128,6 +128,17 @@ function firstFrets() {
   var mm = elements['shapes']._html.match(/<div class="fr">([\s\S]*?)<\/div>/);
   return mm ? mm[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '(none)';
 }
+function nthFrets(n) {
+  var re = /<div class="fr">([\s\S]*?)<\/div>/g, mm, i = 0;
+  while ((mm = re.exec(elements['shapes']._html))) {
+    if (i === n) return mm[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    i++;
+  }
+  return '(none)';
+}
+function easyLabels() {
+  return ((elements['shapes']._html.match(/<div class="easylabel">easy<\/div>/g) || []).length);
+}
 function wedge(kind, i) {
   var g = new El('g');
   g.attrs['data-kind'] = kind;
@@ -406,6 +417,37 @@ console.log('--- chip grouping ---');
   check('Minor group has 7 (incl dim, dim7)', minor.length === 7 && minor.indexOf('dim') >= 0 && minor.indexOf('dim7') >= 0, minor.join(','));
   var all = major.concat(minor, sus);
   check('all 18 covered exactly once', all.length === 18 && TYPES.every(function (t) { return all.indexOf(t.id) >= 0; }), all.join(','));
+})();
+
+console.log('--- hard chords: tag + boosted easy muted voicing ---');
+(function () {
+  setRoot('C'); state.quality = 'maj'; render();
+  check('C hard tag hidden', elements['shapeHard'].hidden !== false, String(elements['shapeHard'].hidden));
+  check('C still 25 ways', elements['shapeCount']._text === '25 ways to play', elements['shapeCount']._text);
+
+  setRoot('E'); state.quality = 'maj'; render();
+  check('E hard tag visible', elements['shapeHard'].hidden === false, String(elements['shapeHard'].hidden));
+  check('E first shape stays 1 4 0 2', firstFrets() === '1 4 0 2', firstFrets());
+  check('E 2nd boosted to easy 1 x 0 2', nthFrets(1) === '1 \u00d7 0 2', nthFrets(1));
+  check('E easy label shown once', easyLabels() === 1, String(easyLabels()));
+  check('E easy shape marked', elements['shapes']._html.indexOf('class="shape easy"') >= 0, '');
+  check('E muted voicing in engine list', findShapes(4, 'maj').some(function (f) { return f.indexOf(-1) >= 0; }), JSON.stringify(findShapes(4, 'maj').slice(0, 4)));
+  check('E default (boosted 2nd) carries -1', findShapes(4, 'maj')[1].indexOf(-1) >= 0, JSON.stringify(findShapes(4, 'maj')[1]));
+
+  setRoot('B\u266d'); state.quality = 'maj'; render();
+  check('Bb 2nd boosted to easy x 2 1 1', nthFrets(1) === '\u00d7 2 1 1', nthFrets(1));
+  check('Bb first stays 3 2 1 1', firstFrets() === '3 2 1 1', firstFrets());
+
+  setRoot('Em'); state.quality = 'm'; render();
+  check('Em hard tag hidden', elements['shapeHard'].hidden !== false, String(elements['shapeHard'].hidden));
+  check('Em first shape 0 4 0 2', firstFrets() === '0 4 0 2', firstFrets());
+
+  setRoot('C\u266fm'); state.quality = 'm'; render();
+  check('C#m 2nd boosted to easy 1 1 0 x', nthFrets(1) === '1 1 0 \u00d7', nthFrets(1));
+  check('C#m hard tag visible', elements['shapeHard'].hidden === false, String(elements['shapeHard'].hidden));
+
+  setRoot('B'); state.quality = 'maj'; render();
+  check('B 2nd boosted to easy x 3 2 2', nthFrets(1) === '\u00d7 3 2 2', nthFrets(1));
 })();
 
 console.log(failures.length ? '\n' + failures.length + ' FAILURES' : '\nALL TESTS PASSED');
