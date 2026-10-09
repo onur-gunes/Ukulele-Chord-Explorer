@@ -458,7 +458,7 @@ main { display: grid; grid-template-columns: 400px 1fr; gap: 34px; align-items: 
       if (covered[idx]) return;
       if (fr === 0) s += '<circle class="oc" cx="' + xStr(idx) + '" cy="' + (top - 9) + '" r="4.5"/>';
       else if (fr < 0) {
-        var mx = xStr(idx), my = top - 9, mr = 5;
+        var mx = xStr(idx), my = top - 9, mr = 4.5;
         s += '<line class="mx" x1="' + (mx - mr) + '" y1="' + (my - mr) + '" x2="' + (mx + mr) + '" y2="' + (my + mr) + '"/>' +
           '<line class="mx" x1="' + (mx - mr) + '" y1="' + (my + mr) + '" x2="' + (mx + mr) + '" y2="' + (my - mr) + '"/>';
       }
