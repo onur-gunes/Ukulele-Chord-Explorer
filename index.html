@@ -144,7 +144,7 @@ main { display: grid; grid-template-columns: 400px 1fr; gap: 34px; align-items: 
 .nut { stroke: #c9d2df; stroke-width: 4.5; stroke-linecap: round; }
 .dot, .bar { fill: var(--accent); }
 .oc { fill: none; stroke: #77829a; stroke-width: 1.7; }
-.mx { fill: #77829a; font-size: 11px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+.mx { fill: #77829a; font-size: 14px; font-weight: 750; text-anchor: middle; dominant-baseline: central; }
 .pos {
   fill: #828d9e; font-size: 11px; font-weight: 700;
   text-anchor: middle; dominant-baseline: central;
@@ -457,7 +457,7 @@ main { display: grid; grid-template-columns: 400px 1fr; gap: 34px; align-items: 
     frets.forEach(function (fr, idx) {
       if (covered[idx]) return;
       if (fr === 0) s += '<circle class="oc" cx="' + xStr(idx) + '" cy="' + (top - 9) + '" r="4.5"/>';
-      else if (fr < 0) s += '<text class="mx" x="' + xStr(idx) + '" y="' + (top - 9) + '">\u00d7</text>';
+      else if (fr < 0) s += '<text class="mx" x="' + xStr(idx) + '" y="' + (top - 8) + '">\u00d7</text>';
       else s += '<circle class="dot" cx="' + xStr(idx) + '" cy="' + yDot(fr) + '" r="7"/>';
     });
     return s + '</svg>';
