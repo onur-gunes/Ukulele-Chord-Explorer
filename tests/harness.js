@@ -125,8 +125,8 @@ function clean(s) {
   return s.indexOf('NaN') < 0 && s.indexOf('undefined') < 0 && s.indexOf('Infinity') < 0;
 }
 function firstFrets() {
-  var mm = elements['shapes']._html.match(/<div class="fr">([^<]+)<\/div>/);
-  return mm ? mm[1] : '(none)';
+  var mm = elements['shapes']._html.match(/<div class="fr">([\s\S]*?)<\/div>/);
+  return mm ? mm[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '(none)';
 }
 function wedge(kind, i) {
   var g = new El('g');

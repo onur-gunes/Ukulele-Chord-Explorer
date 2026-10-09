@@ -120,8 +120,12 @@ main { display: grid; grid-template-columns: 400px 1fr; gap: 34px; align-items: 
 .shape:hover { border-color: var(--border2); transform: translateY(-2px); }
 .shape svg { width: 100%; max-width: 116px; height: auto; display: block; }
 .shape .fr {
-  font-size: 11.5px; color: var(--dim); letter-spacing: 0.14em;
-  font-variant-numeric: tabular-nums;
+  position: relative; display: block; width: 100%; max-width: 116px; height: 15px;
+  font-size: 11.5px; color: var(--dim); font-variant-numeric: tabular-nums;
+}
+.shape .fr span {
+  position: absolute; top: 0; transform: translateX(-50%);
+  min-width: 16px; text-align: center; font-weight: 600;
 }
 .st { stroke: #5f6d80; stroke-width: 1.4; }
 .fw { stroke: #4c5765; stroke-width: 1.4; }
@@ -329,9 +333,13 @@ main { display: grid; grid-template-columns: 400px 1fr; gap: 34px; align-items: 
     return out;
   }
 
+  var DIAG_W = 104, DIAG_PAD = 22;
+  var DIAG_GAP = (DIAG_W - 2 * DIAG_PAD) / 3;
+  function strX(i) { return DIAG_PAD + i * DIAG_GAP; }
+
   function diagramSVG(frets) {
-    var W = 104, padX = 22, fg = 21;
-    var gap = (W - 2 * padX) / 3;
+    var W = DIAG_W, padX = DIAG_PAD, fg = 21;
+    var gap = DIAG_GAP;
     var nz = frets.filter(function (f) { return f > 0; });
     var minF = nz.length ? Math.min.apply(null, nz) : 0;
     var hasOpen = frets.indexOf(0) >= 0;
@@ -643,7 +651,10 @@ main { display: grid; grid-template-columns: 400px 1fr; gap: 34px; align-items: 
     document.getElementById('shapes').innerHTML = shapes.length
       ? shapes.map(function (f, i) {
           return '<div class="shape" style="animation-delay:' + Math.min(i * 25, 350) + 'ms">' +
-            diagramSVG(f) + '<div class="fr">' + f.join(' ') + '</div></div>';
+            diagramSVG(f) +
+            '<div class="fr">' + f.map(function (v, j) {
+              return '<span style="left:' + (strX(j) / DIAG_W * 100).toFixed(4) + '%">' + v + '</span>';
+            }).join('') + '</div></div>';
         }).join('')
       : '<div class="empty">No four-string voicing found below the 12th fret.</div>';
   }
