@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0d1014">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="images/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="images/icon-192.png" sizes="192x192">
 <title>Ukulele Chord Explorer</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -767,6 +773,15 @@ main { display: grid; grid-template-columns: 400px 1fr; gap: 34px; align-items: 
     render();
   });
   render();
+  function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    if (location.search.indexOf('nosw') !== -1) return;
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return;
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function () { /* offline-only nicety */ });
+    });
+  }
+  registerServiceWorker();
 })();
 </script>
 </body>
